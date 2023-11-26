@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>スロット</title>
+  <meta http-equiv="Content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div id="main" class="parent">
+    <div class="block" style="top:200px;"></div>
+    <div id= "slot1"></div>
+    <div id= "slot2"></div>
+    <div id= "slot3"></div>
+    <div class="block"></div>
+    <input id="start" type="button" value="SPIN" onclick="startSlot()">
+    <input class="stop" type="button" value="STOP" onclick="stopSlot(0)" style="left:100px;">
+    <input class="stop" type="button" value="STOP" onclick="stopSlot(1)" style="left:250px;">
+    <input class="stop" type="button" value="STOP" onclick="stopSlot(2)" style="left:400px;">
+    <img src="ビスカス.png"id="bisukasu">
+    <img src="ビスカス2.png" class="blink"  id="miesesu2" style="display:none">
+  </div>
+  
+  <div class="back" ></div>
+  <!-- <img src="miesesu.jpg"> -->
+  <img class="blink"id="bisukasu2"style="display:none">
+
+<script type="text/javascript">
+
+
+
+var slotArray = []; // グローバル変数としてslotArrayを宣言
+
+var Slot = (function() {
+  var 
+  count = 0,
+  check = -1, 
+  stopCount = 0,
+  miesesucount = 0, 
+  sevencount = 0,
+  instanceNum = 0;
+
+
+
+  // Slot コンストラクタ
+  var slot = function(images, imageWidth, imageHeight, x, y, id) {
+    this.images = [];
+    this.lastPosition = []; // 各画像の最後の位置を保存する配列
+    for (var i = 0; i < images.length; i++) {
+      var img = document.createElement('img');
+      img.src = images[i];
+      img.width = imageWidth;
+      img.height = imageHeight;
+      img.style.top = (this.lastPosition[i] || y) + i * imageHeight + "px"; // lastPositionを使用して初期位置を設定
+      img.style.left = x + "px";
+      
+      var dom = document.getElementById(id);
+      dom.appendChild(img);
+      this.images.push(img);
+      this.lastPosition.push(y + i * imageHeight); // 初期位置をlastPositionに保存
+    }
+    this.width = imageWidth;
+    this.height = imageHeight;
+    this.x = x;
+    this.y = y;
+    this.len = 3 * this.height + this.y;
+    this.reset = this.y - this.height;
+    this.running = false;
+    this.t = {};
+    this.timers = [];
+    instanceNum++;
+  };
+
+  // Slot プロトタイプ
+  var p = slot.prototype;
+
+  // スピン開始
+  p.start = function() {
+    count = 0; check = -1; stopCount = 0; morita = 0;
+    document.getElementById("bisukasu2").style.display = "none";
+    document.getElementById("miesesu2").style.display = "none";
+    if (!this.running) {
+      this.running = true;
+      // lastPositionからスタート
+      for(var i = 0; i< 2; i++){ 
+        for (var key in this.images) {
+            var img = this.images[key];
+            img.style.top = this.lastPosition[key] + "px";
+            this.move(key, this);
+        }
+    }
+    }
+  };
+
+  // 画像移動
+  p.move = function(n, slotObj) {
+    var img = slotObj.images[n];
+    slotObj.timers[n] = setTimeout(function() {
+      img.style.top = img.offsetTop >= slotObj.len ? slotObj.reset + "px": img.offsetTop + 1 + "px";
+      if (!slotObj.running) {
+        if (img.offsetTop == slotObj.height * 0 + slotObj.y ||
+            img.offsetTop == slotObj.height * 1 + slotObj.y ||
+            img.offsetTop == slotObj.height * 2 + slotObj.y ||
+            img.offsetTop == slotObj.height * 3 + slotObj.y) {
+          clearTimeout(slotObj.timers[n]);
+          delete slotObj.t[n];
+        } else {
+          slotObj.move(n, slotObj);
+        }
+        if (Object.keys(slotObj.t).length == 0) {
+          slotObj.running = false;
+          if (miesesucount == 3) {
+            document.getElementById("bisukasu2").style.display = "block";
+            sevencount = 0;
+          }
+          if (sevencount == 3) {
+            document.getElementById("miesesu2").style.display = "block";
+            miesesucount = 0;
+          }
+        }
+      } else {
+        slotObj.move(n, slotObj);
+      }
+    }, 1);
+  };
+
+  // スピン停止
+  p.stop = function() {
+    document.getElementById("start").addEventListener('click', () => {
+      sevencount = 0,
+      miesesucount = 0;
+    });
+    if (this.running) {
+      this.running = false;
+      console.log("this.timers",this.timers);
+      for (var key in this.timers) {
+        clearTimeout(this.timers[key]);
+        var img = this.images[key];
+        // 停止した位置を保存
+        this.lastPosition[key] = img.offsetTop;
+        if (img.src.includes("seven.png") &&
+            img.offsetTop >= this.y &&
+            img.offsetTop < this.y + this.height) {
+          sevencount++;
+        }
+        if (img.src.includes("hit.png") &&
+            img.offsetTop >= this.y &&
+            img.offsetTop < this.y + this.height) {
+          miesesucount++;
+          console.log("miesesucount",miesesucount)
+        }
+      }
+      stopCount++;
+    }
+  };
+
+  return slot;
+})();
+
+// Slot インスタンスの初期化
+var slot1 = new Slot(["bell.png", "cherry.png", "seven.png", "hit.png"], 100, 100, 100, 0, "slot1");
+var slot2 = new Slot(["bell.png", "cherry.png", "seven.png", "hit.png"], 100, 100, 250, 0, "slot2");
+var slot3 = new Slot(["bell.png", "cherry.png", "seven.png", "hit.png"], 100, 100, 400, 0, "slot3");
+
+// スロット配列
+var slotArray = [slot1, slot2, slot3];
+
+// スロットのクリア
+// function clearSlots() {
+//   for (var i = 0; i < slotArray.length; i++) {
+//     var slotElement = document.getElementById('slot' + (i + 1));
+//     slotElement.innerHTML = '';
+//   }
+// }
+
+// スピン開始関数
+function startSlot() {
+  for (var i = 0; i < slotArray.length; i++) {
+    slotArray[i].start();
+  }
+}
+
+// スピン停止関数
+function stopSlot(n) {
+  if (slotArray[n]) {
+    slotArray[n].stop();
+  }
+}
+document.addEventListener('keydown', function(e) {
+  switch(e.keyCode) {
+    case 37: 
+      stopSlot(0);
+      break;
+    case 40: 
+      stopSlot(1);
+      break;
+    case 39: 
+      stopSlot(2);
+      break;
+    case 13: 
+      if (!slotArray[0].running && !slotArray[1].running && !slotArray[2].running) {
+        startSlot();
+      }
+      break;
+  }
+});
+
+
+</script>
+</body>
+</html>
